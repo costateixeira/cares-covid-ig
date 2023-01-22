@@ -15,6 +15,7 @@ on:
       - main
       - master
       - draft
+      - deploy
       - candidate
       - jembi-contrib-fresh
   pull_request:

@@ -1,30 +1,22 @@
 # This is a simple workflow that runs the publisher and copies the output to https://<owner>.github.io/<repo>/index.html
 # Based on the instructions from Elliot Silver, available from: https://www.argentixinfo.com/archives/156
 # Change log:
-# 2021-06-18: publish ddefault branches to / , other branches branches/<branch>
+# 2021-06-18: (JCT): publish default branches to / , other branches branches/<branch>
+# 2021-11-26: (JCT): Reusable workflow
+# 2022-01-28: (JCT): add auto-create gh-pages if it doesn't exist
+# 2023-01-22: (JCT): use checkout action v3, and JamesIves/github-pages-deploy-action@v4
+
 
 # Make sure your repo has a branch called gh-pages
 
 name: CI
 
 # Controls when the action will run. 
-on:
-  # Triggers the workflow on push or pull request events but only for the main branch
+on: 
+  workflow_call: # Reusable by other workflows
+  # Triggers the workflow on push or pull request events for any branch
   push:
-    branches: 
-      - main
-      - master
-      - draft
-      - deploy
-      - candidate
-      - jembi-contrib-fresh
   pull_request:
-    branches: 
-      - main
-      - master
-      - draft
-      - candidate
-      - jembi-contrib-fresh
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -38,16 +30,19 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
+   
       - name: Get branch name
         run: echo ${GITHUB_REF##*/}
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      - name: Create gh-pages branch if it doesn't exist
+        uses: christopherdavenport/create-ghpages-ifnotexists@v1    
       - name: Update the image to the latest publisher
         uses: docker://hl7fhir/ig-publisher-base:latest
         with:
           # Get the latest publisher - don't run the batch script but run the line directly
           args: curl -L https://github.com/HL7/fhir-ig-publisher/releases/latest/download/publisher.jar -o ./input-cache/publisher.jar --create-dirs
-          
+
       - name: Run the IG publisher
         uses: docker://hl7fhir/ig-publisher-base:latest
         with:
@@ -59,7 +54,7 @@ jobs:
         uses: tj-actions/branch-names@v4.3
 
       - name: Deploy candidate
-        uses: JamesIves/github-pages-deploy-action@4.1.4
+        uses: JamesIves/github-pages-deploy-action@v4.4.1
         if: ${{ steps.branch-name.outputs.is_default }} == 'false'
         with:
           branch: gh-pages # The branch the action should deploy to.
@@ -69,7 +64,7 @@ jobs:
           clean: false 
 
       - name: Deploy main
-        uses: JamesIves/github-pages-deploy-action@4.1.4
+        uses: JamesIves/github-pages-deploy-action@v4.4.1
         if: ${{ steps.branch-name.outputs.is_default }} == 'true'
         with:
           branch: gh-pages # The branch the action should deploy to.
